@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roblox Avatar Dançante - DK Edition</title>
+<style>
+  body,html{ margin:0; height:100%; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#eee; font-family:sans-serif; }
+  #canvas-container { width: 400px; height: 500px; background:#222; border-radius: 12px; box-shadow: 0 0 20px #00f; }
+  input, button {
+    margin: 10px 5px; padding: 8px 15px; border-radius: 6px; border:none;
+    font-weight: 700; font-size: 16px;
+  }
+  button { background:#0055ff; color:#fff; cursor:pointer; }
+  button:hover { background:#0033cc; }
+</style>
+</head>
+<body>
+
+<h2>Roblox Avatar Dançante - DK Edition</h2>
+<input id="inputNick" type="text" placeholder="Cola o nick aí, mano" />
+<button id="btnLoad">Ver Avatar Dançando</button>
+<div id="canvas-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+  const container = document.getElementById('canvas-container')
+  let scene, camera, renderer, avatarModel, mixer, clock
+
+  clock = new THREE.Clock()
+
+  function initScene() {
+    scene = new THREE.Scene()
+    scene.background = new THREE.Color(0x111122)
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000)
+    camera.position.set(0, 2, 5)
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    renderer.setSize(container.clientWidth, container.clientHeight)
+    container.appendChild(renderer.domElement)
+
+    const light = new THREE.DirectionalLight(0xffffff, 1)
+    light.position.set(0, 10, 10)
+    scene.add(light)
+
+    const ambient = new THREE.AmbientLight(0x404040)
+    scene.add(ambient)
+  }
+
+  function animate() {
+    requestAnimationFrame(animate)
+    if(mixer) mixer.update(clock.getDelta())
+    renderer.render(scene, camera)
+  }
+
+  async function fetchUserId(nick) {
+    try {
+      const res = await fetch(`https://api.roblox.com/users/get-by-username?username=${nick}`)
+      const data = await res.json()
+      return data.Id
+    } catch(e) { return null }
+  }
+
+  async function loadAvatar(userId) {
+    if (avatarModel) {
+      scene.remove(avatarModel)
+      avatarModel = null
+      mixer = null
+    }
+    // Roblox avatar 3D model URL (GLB) template:
+    // https://avatar.roblox.com/v1/avatar/assets?userId=USERID&isCircular=false
+    // Problema: Roblox não libera modelo 3D pra pegar direto, só imagens.
+    // Solução: usar modelos públicos (exemplo: Roblox Animation Models ou usar placeholder)
+    // Aqui, vamos carregar modelo genérico animado (exemplo de GLTF de dance)
+    // Pra demo, usar modelo simples com animação dance em GLTF
+
+    // Model dance demo (free modelo público)
+    const url = "https://models.babylonjs.com/Dude/dude.gltf" // modelo com animação de walk
+
+    const loader = new THREE.GLTFLoader()
+    loader.load(url, function(gltf) {
+      avatarModel = gltf.scene
+      avatarModel.scale.set(0.02, 0.02, 0.02)
+      scene.add(avatarModel)
+
+      mixer = new THREE.AnimationMixer(avatarModel)
+      const action = mixer.clipAction(gltf.animations[0])
+      action.play()
+    }, undefined, function(error) {
+      console.error(error)
+    })
+  }
+
+  document.getElementById("btnLoad").onclick = async function() {
+    const nick = document.getElementById("inputNick").value.trim()
+    if(!nick) return alert("Cola o nick, mano!")
+
+    const userId = await fetchUserId(nick)
+    if(!userId || userId === 0) return alert("Nick inválido ou não achado!")
+
+    await loadAvatar(userId)
+  }
+
+  initScene()
+  animate()
+</script>
+
+</body>
+</html>
